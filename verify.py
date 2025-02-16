@@ -2,11 +2,16 @@ import subprocess
 import sys
 import re
 
-def run_torrent_verification(torrent_file):
+def run_torrent_verification(torrent_file, download_dir=None):
     try:
+        # Prepare arguments for subprocess.run
+        args = ['python3', 'verify_torrent.py', torrent_file]
+        if download_dir:
+            args.append(download_dir)
+        
         # Run the verification script
         result = subprocess.run(
-            ['python3', 'verify_torrent.py', torrent_file],
+            args,
             check=True,
             text=True,
             capture_output=True
@@ -25,10 +30,14 @@ def run_torrent_verification(torrent_file):
         print(f"An error occurred while running the verification script: {e}")
         sys.exit(1)
 
-if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python3 wrapper_script.py <torrent_file>")
-        sys.exit(1)
-    
+def main():
+    if len(sys.argv) < 2 or sys.argv[1] in ('-h', '--help'):
+        print("Usage: python3 wrapper_script.py <torrent_file> [<download_directory>]")
+        sys.exit(0)
+
     torrent_file = sys.argv[1]
-    run_torrent_verification(torrent_file)
+    download_dir = sys.argv[2] if len(sys.argv) > 2 else None
+    run_torrent_verification(torrent_file, download_dir)
+
+if __name__ == "__main__":
+    main()

@@ -3,15 +3,16 @@ import os
 import sys
 from hashlib import sha1
 
-def verify_torrent(torrent_file):
+def verify_torrent(torrent_file, download_dir=None):
     info = lt.torrent_info(torrent_file)
-    save_path = os.path.dirname(torrent_file)
+    
+    # Use provided download_dir or default to the directory of the torrent file
+    save_path = download_dir if download_dir else os.path.dirname(torrent_file)
 
     for piece_index in range(info.num_pieces()):
         piece_data = b''
         piece_length = info.piece_length()
 
-        # Use the iterator directly since direct indexing might be deprecated
         for file_entry in info.files():
             file_offset = file_entry.offset
             file_path = os.path.join(save_path, file_entry.path)
@@ -55,10 +56,14 @@ def verify_torrent(torrent_file):
                 print(f"  Actual Piece Length: {actual_piece_length}")
                 print(f"  Last byte sample: {piece_data[-16:].hex() if piece_data else 'No data'}")
 
-if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python3 verify_torrent.py <torrent_file>")
-        sys.exit(1)
+def main():
+    if len(sys.argv) < 2 or sys.argv[1] in ('-h', '--help'):
+        print("Usage: python3 verify_torrent.py <torrent_file> [<download_directory>]")
+        sys.exit(0)
 
     torrent_file = sys.argv[1]
-    verify_torrent(torrent_file)
+    download_dir = sys.argv[2] if len(sys.argv) > 2 else None
+    verify_torrent(torrent_file, download_dir)
+
+if __name__ == "__main__":
+    main()
