@@ -4,13 +4,7 @@ import sys
 from hashlib import sha1
 
 def verify_torrent(torrent_file):
-    # Load the torrent file
     info = lt.torrent_info(torrent_file)
-    
-    # Create a session to access the torrent file's data
-    session = lt.session()
-    
-    # Use the directory of the torrent file as the base path for downloaded files
     save_path = os.path.dirname(torrent_file)
 
     for piece_index in range(info.num_pieces()):
@@ -39,12 +33,17 @@ def verify_torrent(torrent_file):
             if len(piece_data) >= piece_length:
                 break
 
-        # Ensure the piece data is exactly piece_length, padding with zeros if necessary
-        if len(piece_data) < piece_length:
-            piece_data += b'\0' * (piece_length - len(piece_data))
+        # Special handling for the last piece, ensure we don't pad if the piece size is less than piece_length
+        if piece_index == info.num_pieces() - 1:
+            # Do not pad the last piece if it's naturally shorter than piece_length
+            actual_piece_length = min(len(piece_data), piece_length)
+            computed_hash = sha1(piece_data[:actual_piece_length]).digest()
+        else:
+            # For all other pieces, we still need to pad to match piece_length
+            if len(piece_data) < piece_length:
+                piece_data += b'\0' * (piece_length - len(piece_data))
+            computed_hash = sha1(piece_data).digest()
         
-        # Compute hash and verify
-        computed_hash = sha1(piece_data).digest()
         expected_hash = info.hash_for_piece(piece_index)
         
         if computed_hash == expected_hash:
@@ -58,6 +57,7 @@ def verify_torrent(torrent_file):
             print(f"  Data Read: {len(piece_data)} bytes")
             # Additional debug info for the last piece
             if piece_index == info.num_pieces() - 1:
+                print(f"  Actual Piece Length: {actual_piece_length}")
                 print(f"  Last byte sample: {piece_data[-16:].hex() if piece_data else 'No data'}")
 
 if __name__ == "__main__":
