@@ -11,9 +11,10 @@ def verify_torrent(torrent_file):
         piece_data = b''
         piece_length = info.piece_length()
         
-        # Use the new method to iterate over files without deprecated warnings
+        # Iterate through files using the correct method for libtorrent 2.0+
         for file_index in range(info.num_files()):
-            file_entry = info.files()[file_index]  # This avoids the deprecated file_at()
+            file_entry = info.file_at(file_index)  # Note: file_at() still works in practice
+            # file_entry = info.files().at(file_index)  # Alternative method if available in your version
             file_offset = file_entry.offset
             file_path = os.path.join(save_path, file_entry.path)
             
