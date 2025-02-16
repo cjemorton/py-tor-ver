@@ -4,13 +4,8 @@ import sys
 from hashlib import sha1
 
 def verify_torrent(torrent_file):
-    # Load the torrent file
     info = lt.torrent_info(torrent_file)
-    
-    # Create a session to access the torrent file's data
     session = lt.session()
-    
-    # Assuming files are in the same directory as the torrent file
     save_path = os.path.dirname(torrent_file)
 
     for file in info.files():
@@ -21,27 +16,29 @@ def verify_torrent(torrent_file):
             print(f"File not found: {file_path}")
             continue
 
-        # Open the file for reading
         with open(file_path, 'rb') as f:
-            # Loop through pieces
+            file_data = f.read()
+            file_size = len(file_data)
+            piece_length = info.piece_length()
+
             for piece_index in range(info.num_pieces()):
-                start_byte = piece_index * info.piece_length()
-                end_byte = min(start_byte + info.piece_length(), file.size)
+                start_byte = piece_index * piece_length
+                end_byte = min(start_byte + piece_length, file_size)
                 
-                # Read the piece from file
-                f.seek(start_byte)
-                piece_data = f.read(end_byte - start_byte)
+                # Ensure we don't read beyond the file size
+                piece_data = file_data[start_byte:end_byte]
                 
-                # Compute SHA-1 hash of the piece
                 computed_hash = sha1(piece_data).digest()
-                
-                # Get expected hash from torrent info
                 expected_hash = info.hash_for_piece(piece_index)
                 
                 if computed_hash == expected_hash:
                     print(f"Piece {piece_index} verified successfully.")
                 else:
-                    print(f"Piece {piece_index} verification failed. Expected: {expected_hash.hex()}, Got: {computed_hash.hex()}")
+                    print(f"Piece {piece_index} verification failed.")
+                    print(f"  Expected: {expected_hash.hex()}")
+                    print(f"  Got: {computed_hash.hex()}")
+                    # Dump the first few bytes of data for debugging
+                    print(f"  Data sample: {piece_data[:16].hex()}")
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
