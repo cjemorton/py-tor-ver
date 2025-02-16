@@ -36,7 +36,7 @@ def verify_torrent(torrent_file):
                 computed_hash = sha1(piece_data).digest()
                 
                 # Get expected hash from torrent info
-                expected_hash = info.hash_for_piece(piece_index).to_bytes()
+                expected_hash = info.hash_for_piece(piece_index)
                 
                 if computed_hash == expected_hash:
                     print(f"Piece {piece_index} verified successfully.")
