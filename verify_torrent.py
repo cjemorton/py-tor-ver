@@ -12,7 +12,7 @@ def verify_torrent(torrent_file):
         piece_length = info.piece_length()
         
         for file_index in range(info.num_files()):
-            file_entry = info.file_at(file_index)
+            file_entry = info.files().file_at(file_index)  # Use files().file_at instead of file_at
             file_offset = file_entry.offset
             file_path = os.path.join(save_path, file_entry.path)
             
