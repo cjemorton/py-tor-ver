@@ -2,11 +2,6 @@ import libtorrent as lt
 import os
 import sys
 from hashlib import sha1
-import warnings
-
-# Suppress specific deprecation warnings
-warnings.filterwarnings("ignore", category=DeprecationWarning, message="file_at\\(\\) is deprecated")
-warnings.filterwarnings("ignore", category=DeprecationWarning, message="file_entry is deprecated")
 
 def verify_torrent(torrent_file):
     info = lt.torrent_info(torrent_file)
@@ -16,8 +11,9 @@ def verify_torrent(torrent_file):
         piece_data = b''
         piece_length = info.piece_length()
         
+        # Use the new method to iterate over files without deprecated warnings
         for file_index in range(info.num_files()):
-            file_entry = info.file_at(file_index)  # This method will still work, but we're ignoring the warning
+            file_entry = info.files()[file_index]  # This avoids the deprecated file_at()
             file_offset = file_entry.offset
             file_path = os.path.join(save_path, file_entry.path)
             
