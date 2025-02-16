@@ -2,6 +2,7 @@ import libtorrent as lt
 import os
 import sys
 from hashlib import sha1
+import warnings
 
 def verify_torrent(torrent_file):
     info = lt.torrent_info(torrent_file)
@@ -10,29 +11,53 @@ def verify_torrent(torrent_file):
     for piece_index in range(info.num_pieces()):
         piece_data = b''
         piece_length = info.piece_length()
-        
-        # Iterate through files using the correct method for libtorrent 2.0+
-        for file_index in range(info.num_files()):
-            file_entry = info.file_at(file_index)  # Note: file_at() still works in practice
-            # file_entry = info.files().at(file_index)  # Alternative method if available in your version
-            file_offset = file_entry.offset
-            file_path = os.path.join(save_path, file_entry.path)
-            
-            if not os.path.exists(file_path):
-                print(f"File not found: {file_path}")
-                continue
 
-            with open(file_path, 'rb') as f:
-                start_in_file = max(0, piece_index * piece_length - file_offset)
-                end_in_file = min(file_entry.size, (piece_index + 1) * piece_length - file_offset)
+        # Try using the newer method if available, otherwise fall back to deprecated
+        try:
+            # Newer method to access files one by one
+            for file_index in range(info.num_files()):
+                file_entry = info.file_at(file_index)  # Use this if available
+                file_offset = file_entry.offset
+                file_path = os.path.join(save_path, file_entry.path)
                 
-                if start_in_file < end_in_file:  # The file contributes to this piece
-                    f.seek(start_in_file)
-                    piece_data += f.read(end_in_file - start_in_file)
-            
-            if len(piece_data) >= piece_length:
-                break
+                if not os.path.exists(file_path):
+                    print(f"File not found: {file_path}")
+                    continue
 
+                with open(file_path, 'rb') as f:
+                    start_in_file = max(0, piece_index * piece_length - file_offset)
+                    end_in_file = min(file_entry.size, (piece_index + 1) * piece_length - file_offset)
+                    
+                    if start_in_file < end_in_file:  # The file contributes to this piece
+                        f.seek(start_in_file)
+                        piece_data += f.read(end_in_file - start_in_file)
+                
+                if len(piece_data) >= piece_length:
+                    break
+        except AttributeError:
+            # Fallback to deprecated method if `file_at` isn't available
+            warnings.warn("Using deprecated method. Update libtorrent if possible.", DeprecationWarning)
+            for file_index in range(info.num_files()):
+                file_entry = info.files().file_at(file_index)  # Deprecated, but fallback
+                file_offset = file_entry.offset
+                file_path = os.path.join(save_path, file_entry.path)
+                
+                if not os.path.exists(file_path):
+                    print(f"File not found: {file_path}")
+                    continue
+
+                with open(file_path, 'rb') as f:
+                    start_in_file = max(0, piece_index * piece_length - file_offset)
+                    end_in_file = min(file_entry.size, (piece_index + 1) * piece_length - file_offset)
+                    
+                    if start_in_file < end_in_file:  # The file contributes to this piece
+                        f.seek(start_in_file)
+                        piece_data += f.read(end_in_file - start_in_file)
+                
+                if len(piece_data) >= piece_length:
+                    break
+
+        # Piece verification logic remains the same
         if piece_index == info.num_pieces() - 1:
             actual_piece_length = min(len(piece_data), piece_length)
             computed_hash = sha1(piece_data[:actual_piece_length]).digest()
