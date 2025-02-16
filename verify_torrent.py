@@ -16,7 +16,8 @@ def verify_torrent(torrent_file):
         piece_data = b''
         piece_length = info.piece_length()
         
-        for file_entry in info.files():
+        for file_index in range(info.num_files()):
+            file_entry = info.file_at(file_index)  # This method will still work, but we're ignoring the warning
             file_offset = file_entry.offset
             file_path = os.path.join(save_path, file_entry.path)
             
