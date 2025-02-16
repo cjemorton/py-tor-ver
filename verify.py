@@ -2,7 +2,10 @@ import libtorrent as lt
 import os
 import sys
 from hashlib import sha1
-import re
+import warnings
+
+# Suppress deprecation warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 def verify_torrent(torrent_file, download_dir=None):
     info = lt.torrent_info(torrent_file)
@@ -19,8 +22,7 @@ def verify_torrent(torrent_file, download_dir=None):
             file_path = os.path.join(save_path, file_entry.path)
             
             if not os.path.exists(file_path):
-                print(f"File not found: {file_path}")
-                continue
+                return False  # Silent fail for missing files
 
             with open(file_path, 'rb') as f:
                 start_in_file = max(0, piece_index * piece_length - file_offset)
@@ -44,19 +46,8 @@ def verify_torrent(torrent_file, download_dir=None):
         
         expected_hash = info.hash_for_piece(piece_index)
         
-        if computed_hash == expected_hash:
-            print(f"Piece {piece_index} verified successfully.")
-        else:
-            print(f"Piece {piece_index} verification failed.")
-            print(f"  Expected: {expected_hash.hex()}")
-            print(f"  Got: {computed_hash.hex()}")
-            print(f"  Data sample: {piece_data[:16].hex() if piece_data else 'No data'}")
-            print(f"  Piece Length: {piece_length}")
-            print(f"  Data Read: {len(piece_data)} bytes")
-            if piece_index == info.num_pieces() - 1:
-                print(f"  Actual Piece Length: {actual_piece_length}")
-                print(f"  Last byte sample: {piece_data[-16:].hex() if piece_data else 'No data'}")
-            return False  # One piece failed verification
+        if computed_hash != expected_hash:
+            return False  # Silent fail for piece mismatch
     return True  # All pieces verified successfully
 
 def main():
@@ -70,9 +61,9 @@ def main():
     all_verified = verify_torrent(torrent_file, download_dir)
 
     if all_verified:
-        print("All pieces verified successfully.")
+        print("Torrent verified successfully.")
     else:
-        print("Error: One or more pieces failed verification.")
+        print("Torrent verification failed.")
         sys.exit(1)
 
 if __name__ == "__main__":
