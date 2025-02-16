@@ -10,14 +10,13 @@ def verify_torrent(torrent_file):
     # Create a session to access the torrent file's data
     session = lt.session()
     
-    # Assuming files are in the same directory as the torrent file
+    # Use the directory of the torrent file as the base path for downloaded files
     save_path = os.path.dirname(torrent_file)
 
     for piece_index in range(info.num_pieces()):
         piece_data = b''
         piece_length = info.piece_length()
         
-        # Loop through each file in the torrent to collect data for the piece
         for file_index in range(info.num_files()):
             file_entry = info.file_at(file_index)
             file_offset = file_entry.offset
@@ -28,7 +27,7 @@ def verify_torrent(torrent_file):
                 continue
 
             with open(file_path, 'rb') as f:
-                # Determine if this file contributes to the current piece
+                # Calculate the exact byte range within the file for this piece
                 start_in_file = max(0, piece_index * piece_length - file_offset)
                 end_in_file = min(file_entry.size, (piece_index + 1) * piece_length - file_offset)
                 
@@ -40,10 +39,9 @@ def verify_torrent(torrent_file):
             if len(piece_data) >= piece_length:
                 break
 
-        # Truncate or pad the piece data if necessary
-        piece_data = piece_data[:piece_length]  # Truncate if too long
+        # Ensure the piece data is exactly piece_length, padding with zeros if necessary
         if len(piece_data) < piece_length:
-            piece_data += b'\0' * (piece_length - len(piece_data))  # Pad with zeros if too short
+            piece_data += b'\0' * (piece_length - len(piece_data))
         
         # Compute hash and verify
         computed_hash = sha1(piece_data).digest()
@@ -56,6 +54,11 @@ def verify_torrent(torrent_file):
             print(f"  Expected: {expected_hash.hex()}")
             print(f"  Got: {computed_hash.hex()}")
             print(f"  Data sample: {piece_data[:16].hex() if piece_data else 'No data'}")
+            print(f"  Piece Length: {piece_length}")
+            print(f"  Data Read: {len(piece_data)} bytes")
+            # Additional debug info for the last piece
+            if piece_index == info.num_pieces() - 1:
+                print(f"  Last byte sample: {piece_data[-16:].hex() if piece_data else 'No data'}")
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
