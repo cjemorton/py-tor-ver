@@ -11,10 +11,8 @@ def verify_torrent(torrent_file):
         piece_data = b''
         piece_length = info.piece_length()
 
-        # Use the modern method to iterate over files
-        for file_index in range(info.num_files()):
-            # Accessing files via index without deprecated methods
-            file_entry = info.file_at(file_index)
+        # Use the iterator directly since direct indexing might be deprecated
+        for file_entry in info.files():
             file_offset = file_entry.offset
             file_path = os.path.join(save_path, file_entry.path)
             
